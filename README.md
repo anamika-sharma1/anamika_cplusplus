@@ -139,3 +139,21 @@ bind	Required in practice: clients need a known port	Optional; usually skipped
 listen / accept	Yes: waits for calls	No
 connect	No: doesn’t know who to call	Yes: starts the conversation
 -----------------------------------------------------------------------------------------------------------------------------------------
+a single thread can do it, with a different tool
+
+Real high-performance servers (nginx, Redis, Node.js) do use one thread, or a few, for thousands of clients. The trick is not to block on one socket, but to ask the kernel “wake me when any of these sockets has something”. That’s what poll(), select() and Linux’s epoll do:
+
+cpp
+std::vector<pollfd> fds = {{listenFd, POLLIN, 0}};
+while (true) {
+    poll(fds.data(), fds.size(), -1);      // sleep until ANY socket is ready
+    for (auto& p : fds) {
+        if (!(p.revents & POLLIN)) continue;
+        if (p.fd == listenFd) {
+            // a new client is waiting: accept() won't block now
+        } else {
+            // this client sent data: recv() won't block now; broadcast complete lines
+        }
+    }
+}
+-----------------------------------------------------------------------------------------------------------------------------------------
