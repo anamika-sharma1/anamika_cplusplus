@@ -106,9 +106,36 @@ Leaks matter while the program is running, not after it exits.
 reinterpret_cast<sockaddr*>(...) changes the pointer’s type. &addr has type sockaddr_in* (pointer to an IPv4 address), but bind is declared to take sockaddr* (pointer to a generic address):
 
 That’s because bind is a C function from the 1980s, written to work with every kind of address: IPv4 (sockaddr_in), IPv6 (sockaddr_in6), local Unix sockets (sockaddr_un). C has no templates or overloading, so the designers used one generic type for all of them. Every address struct begins with the same field, the family (AF_INET, AF_INET6, ...), so the OS reads that first field and knows which real type it’s looking at.
+-----------------------------------------------------------------------------------------------------------------------------------------
 
 TCP connection, a pipe of bytes.
 -----------------------------------------------------------------------------------------------------------------------------------------
 int listenFd = ::socket(AF_INET, SOCK_STREAM, 0);
 
 This asks the OS for a new socket: AF_INET means IPv4, SOCK_STREAM means TCP, and 0 means “the default protocol for that”, which is TCP. It returns a file descriptor (a small integer like 3), or −1 on failure.
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+A network interface is one doorway through which data enters or leaves the machine: the Wi-Fi card, the Ethernet port, or the virtual “loopback” doorway (lo, address 127.0.0.1) that a machine uses to talk to itself. Each doorway has its own IP address.
+
+Every incoming packet arrives through one specific doorway, addressed to that doorway’s IP. So the question for the kernel is: does our server accept packets arriving through this doorway?
+
+Server bound to	Connection to 127.0.0.1:5555 (same machine)	Connection to 192.168.1.20:5555 (friend on Wi-Fi)
+0.0.0.0 (INADDR_ANY)	Accepted	                           Accepted
+127.0.0.1	         Accepted	                           Refused
+192.168.1.20	         Refused	                           Accepted
+
+On any interface” means the server bound to 0.0.0.0, so whichever doorway a connection comes through, as long as it’s for port 5555, it reaches our socket.
+
+2. Why servers use bind, and can clients?
+
+bind and connect do opposite jobs. connect means “I’m calling that address.” It needs a destination, and it starts the conversation. A server doesn’t know who will call or when; its whole job is to wait at a known address. So a server can’t use connect instead of bind. There’s no one to call.
+
+What happens if a server skips bind? I tried it. When a server calls listen() without bind(), the kernel picks a random port for it:
+
+Can a client call bind? Yes. If it does, it chooses its own address; if it doesn’t, connect() assigns one automatically:
+
+Server	Client
+bind	Required in practice: clients need a known port	Optional; usually skipped
+listen / accept	Yes: waits for calls	No
+connect	No: doesn’t know who to call	Yes: starts the conversation
+-----------------------------------------------------------------------------------------------------------------------------------------
