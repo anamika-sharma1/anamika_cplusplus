@@ -102,3 +102,7 @@ So when do leaks actually matter?
 Leaks matter while the program is running, not after it exits.
 -----------------------------------------------------------------------------------------------------------------------------------------
 TCP connection, a pipe of bytes.
+-----------------------------------------------------------------------------------------------------------------------------------------
+int listenFd = ::socket(AF_INET, SOCK_STREAM, 0);
+
+This asks the OS for a new socket: AF_INET means IPv4, SOCK_STREAM means TCP, and 0 means “the default protocol for that”, which is TCP. It returns a file descriptor (a small integer like 3), or −1 on failure.
