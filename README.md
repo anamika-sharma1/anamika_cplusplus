@@ -101,6 +101,12 @@ So when do leaks actually matter?
 
 Leaks matter while the program is running, not after it exits.
 -----------------------------------------------------------------------------------------------------------------------------------------
+&addr is the memory address of that form. bind doesn’t want a copy of the struct; it wants to know where it is, so it can read it.
+
+reinterpret_cast<sockaddr*>(...) changes the pointer’s type. &addr has type sockaddr_in* (pointer to an IPv4 address), but bind is declared to take sockaddr* (pointer to a generic address):
+
+That’s because bind is a C function from the 1980s, written to work with every kind of address: IPv4 (sockaddr_in), IPv6 (sockaddr_in6), local Unix sockets (sockaddr_un). C has no templates or overloading, so the designers used one generic type for all of them. Every address struct begins with the same field, the family (AF_INET, AF_INET6, ...), so the OS reads that first field and knows which real type it’s looking at.
+
 TCP connection, a pipe of bytes.
 -----------------------------------------------------------------------------------------------------------------------------------------
 int listenFd = ::socket(AF_INET, SOCK_STREAM, 0);
